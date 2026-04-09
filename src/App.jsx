@@ -69,7 +69,10 @@ const NEWS_DATA = [
   
   // NEWS
   { id: 11, mainCat: 'news', subCat: 'economia', title: 'Ibovespa rompe os 195 mil pontos', excerpt: 'Mercado em alta com expectativas de juros e cenário externo favorável.', date: 'Agora', source: 'Valor' },
-  { id: 12, mainCat: 'news', subCat: 'brasil', title: 'Novas regras para trabalho remoto aprovadas', excerpt: 'Congresso define normas claras para teletrabalho de profissionais de tecnolo// Componentes movidos para fora do App para evitar perda de foco/teclado
+  { id: 12, mainCat: 'news', subCat: 'brasil', title: 'Novas regras para trabalho remoto aprovadas', excerpt: 'Congresso define normas claras para teletrabalho de profissionais de tecnologia.', date: 'Ontem', source: 'G1' },
+];
+
+// Componentes movidos para fora do App para evitar perda de foco/teclado
 const PageHeader = ({ activeMain, apiKey, searchQuery, setSearchQuery, setShowSettings }) => (
   <div className="mb-8 border-b border-[#262626] pb-6 flex flex-col md:flex-row md:items-center justify-between gap-6 pt-2 md:pt-0">
     <div className="flex-1">
