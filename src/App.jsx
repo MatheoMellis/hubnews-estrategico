@@ -356,7 +356,7 @@ function App() {
 
       <main className="flex-1 bg-[#000000] h-full overflow-y-auto relative w-full">
         <div className="max-w-5xl mx-auto p-6 md:p-10 pt-20 md:pt-10">
-          <PageHeader activeMain={activeMain} apiKey={apiKey} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setShowSettings={setShowSettings} />
+          <PageHeader activeMain={activeMain} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
           <SubNav activeMain={activeMain} activeSub={activeSub} setActiveSub={setActiveSub} />
           {isLoading ? <div className="flex items-center justify-center py-32"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div> : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
