@@ -425,10 +425,4 @@ function App() {
   );
 }
 
-export default App;     </div>
-      </main>
-    </div>
-  );
-}
-
 export default App;
