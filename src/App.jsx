@@ -247,12 +247,13 @@ function App() {
     if (apiKey) {
       setIsLoading(true);
       const query = getQueryForCategory(activeMain, activeSub);
-      const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=pt&country=br&max=9&apikey=${apiKey}`;
+      // Chamada via proxy serverless da Vercel para evitar bloqueio de CORS
+      const url = `/api/news?q=${encodeURIComponent(query)}&apikey=${apiKey}`;
       
       fetch(url)
         .then(response => response.json())
         .then(data => {
-          if (data.articles) {
+          if (data.articles && data.articles.length > 0) {
             const formattedNews = data.articles.map((item, idx) => ({
                id: idx + Math.random(),
                title: item.title,
@@ -264,9 +265,15 @@ function App() {
                subCat: activeSub
             }));
             setDynamicNews(formattedNews);
+          } else {
+            console.warn('API retornou sem artigos:', data);
+            setDynamicNews([]);
           }
         })
-        .catch(err => console.error("Erro API:", err))
+        .catch(err => {
+          console.error("Erro API:", err);
+          setDynamicNews([]);
+        })
         .finally(() => setIsLoading(false));
     }
   }, [activeMain, activeSub, isAuthenticated, apiKey]);
