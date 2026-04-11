@@ -73,7 +73,7 @@ const NEWS_DATA = [
 ];
 
 // Componentes movidos para fora do App para evitar perda de foco/teclado
-const PageHeader = ({ activeMain, apiKey, searchQuery, setSearchQuery, setShowSettings }) => (
+const PageHeader = ({ activeMain, searchQuery, setSearchQuery }) => (
   <div className="mb-8 border-b border-[#262626] pb-6 flex flex-col md:flex-row md:items-center justify-between gap-6 pt-2 md:pt-0">
     <div className="flex-1">
       <h1 className="text-3xl font-bold tracking-tight text-white mb-2">
@@ -81,13 +81,8 @@ const PageHeader = ({ activeMain, apiKey, searchQuery, setSearchQuery, setShowSe
       </h1>
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-sm text-[#A1A1AA]">
-          Visão estratégica em tempo real.
+          Visão estratégica e editais em tempo real.
         </p>
-        {!apiKey && (
-          <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[10px] font-bold border border-amber-500/20 uppercase tracking-widest whitespace-nowrap">
-            Modo Estático
-          </span>
-        )}
       </div>
     </div>
     <div className="flex gap-3 w-full md:w-auto flex-shrink-0">
@@ -102,12 +97,6 @@ const PageHeader = ({ activeMain, apiKey, searchQuery, setSearchQuery, setShowSe
           className="w-full bg-[#0A0A0A] border border-[#262626] rounded-md py-2 pr-4 text-sm text-white placeholder-[#A1A1AA] focus:outline-none focus:border-[#EDEDED] transition-colors"
         />
       </div>
-      <button 
-        onClick={() => setShowSettings(true)}
-        className="p-2 border border-[#262626] bg-[#0A0A0A] rounded-md hover:bg-[#171717] text-[#A1A1AA] transition-colors flex-shrink-0"
-      >
-         <ShieldAlert size={18} />
-      </button>
     </div>
   </div>
 );
@@ -182,11 +171,9 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Dynamic Data States
   const [dynamicNews, setDynamicNews] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState(localStorage.getItem('HUBNEWS_API_KEY') || 'bca4d13fe7d88370c39b731e9b02b5ce');
-  const [showSettings, setShowSettings] = useState(false);
-  const [tempApiKey, setTempApiKey] = useState(apiKey);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -206,32 +193,26 @@ function App() {
     setPassword('');
   };
 
-  const saveApiKey = () => {
-    localStorage.setItem('HUBNEWS_API_KEY', tempApiKey);
-    setApiKey(tempApiKey);
-    setShowSettings(false);
-  };
-
   const getQueryForCategory = (main, sub) => {
     const queries = {
       ti: {
-        all: 'concurso tecnologia',
-        bancos: 'concurso (banco brasil OR caixa economica)',
-        federal: 'concurso (federal OR bndes OR tse OR inss)',
-        policial: 'concurso (policia federal OR policia civil)',
-        universidades: 'concurso (universidade OR ufrj OR usp)'
+        all: '"concurso" ("tecnologia" OR "TI")',
+        bancos: '"concurso" ("banco do brasil" OR "caixa economica")',
+        federal: '"concurso" ("bndes" OR "tse" OR "inss" OR "receita")',
+        policial: '"concurso" ("policia federal" OR "policia civil" OR "PRF")',
+        universidades: '"concurso" ("universidade" OR "ufrj" OR "usp" OR "tecnico")'
       },
       ai: {
-        all: 'inteligencia artificial',
-        local: 'IA local OR gemma OR llama',
-        cloud: 'openai OR gemini OR claude',
-        agents: 'IA agentes OR auto-gpt'
+        all: '"inteligencia artificial" OR "IA"',
+        local: '"IA local" OR "olama" OR "gemma" OR "llama"',
+        cloud: '"openai" OR "chatgpt" OR "gemini" OR "claude"',
+        agents: '"IA" ("agentes" OR "auto-gpt")'
       },
       news: {
         all: 'noticias Brasil',
-        brasil: 'politica Brasil OR tecnologia Brasil',
+        brasil: 'politica Brasil',
         mundo: 'internacional noticias',
-        economia: 'economia OR ibovespa'
+        economia: 'economia ("ibovespa" OR "dolar")'
       }
     };
     return queries[main][sub] || 'concurso';
@@ -241,42 +222,42 @@ function App() {
     setActiveSub('all');
   }, [activeMain]);
 
+  // Fetches Real News from Google RSS (vencedor em nichos focados)
   useEffect(() => {
     if (!isAuthenticated) return;
     
-    if (apiKey) {
-      setIsLoading(true);
-      const query = getQueryForCategory(activeMain, activeSub);
-      // Chamada via proxy serverless da Vercel para evitar bloqueio de CORS
-      const url = `/api/news?q=${encodeURIComponent(query)}&apikey=${apiKey}`;
-      
-      fetch(url)
-        .then(response => response.json())
-        .then(data => {
-          if (data.articles && data.articles.length > 0) {
-            const formattedNews = data.articles.map((item, idx) => ({
-               id: idx + Math.random(),
-               title: item.title,
-               excerpt: item.description || 'Sem descrição.',
-               date: new Date(item.publishedAt).toLocaleDateString('pt-BR'),
-               source: item.source.name,
-               url: item.url,
-               mainCat: activeMain,
-               subCat: activeSub
-            }));
-            setDynamicNews(formattedNews);
-          } else {
-            console.warn('API retornou sem artigos:', data);
-            setDynamicNews([]);
-          }
-        })
-        .catch(err => {
-          console.error("Erro API:", err);
+    setIsLoading(true);
+    const query = getQueryForCategory(activeMain, activeSub);
+    // Uso da engine Google News RSS via conversor JSON -> Resolve CORS e melhora a qualidade da busca em nichos
+    const googleRssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
+    const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(googleRssUrl)}`;
+    
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'ok' && data.items && data.items.length > 0) {
+          const formattedNews = data.items.slice(0, 9).map((item, idx) => ({
+             id: idx + Math.random(),
+             title: item.title,
+             excerpt: item.title, // Google RSS coloca a descrição completa atrelada a title/description HTML. Mantemos title limpo.
+             date: new Date(item.pubDate).toLocaleDateString('pt-BR'),
+             source: item.source || 'Portal',
+             url: item.link,
+             mainCat: activeMain,
+             subCat: activeSub
+          }));
+          setDynamicNews(formattedNews);
+        } else {
+          console.warn('API retornou sem artigos:', data);
           setDynamicNews([]);
-        })
-        .finally(() => setIsLoading(false));
-    }
-  }, [activeMain, activeSub, isAuthenticated, apiKey]);
+        }
+      })
+      .catch(err => {
+        console.error("Erro API RSS:", err);
+        setDynamicNews([]);
+      })
+      .finally(() => setIsLoading(false));
+  }, [activeMain, activeSub, isAuthenticated]);
 
   const filteredNews = dynamicNews.filter(item => {
     return item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -338,28 +319,6 @@ function App() {
 
   return (
     <div className="h-screen w-full bg-[#000000] flex overflow-hidden relative">
-      <AnimatePresence>
-        {showSettings && (
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-          >
-             <div className="bg-[#0A0A0A] border border-[#262626] w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
-                <button onClick={() => setShowSettings(false)} className="absolute top-4 right-4 text-[#A1A1AA] hover:text-white"><X size={18}/></button>
-                <h3 className="text-xl font-bold text-white mb-2">Integração de Notícias</h3>
-                <p className="text-[#A1A1AA] text-sm mb-6">Configure sua API Key da GNews aqui.</p>
-                <div className="mb-4">
-                  <label className="text-xs font-semibold text-[#A1A1AA] uppercase tracking-widest block mb-2">API GNews Key</label>
-                  <input type="password" value={tempApiKey} onChange={(e) => setTempApiKey(e.target.value)} style={{ paddingLeft: '1rem' }} className="w-full bg-[#000000] border border-[#262626] rounded-md py-2.5 text-sm text-white focus:outline-none focus:border-white transition-colors" />
-                </div>
-                <div className="flex gap-3 justify-end mt-8">
-                  <button onClick={() => setShowSettings(false)} className="px-4 py-2 text-sm text-white bg-[#171717] rounded-md hover:bg-[#262626]">Cancelar</button>
-                  <button onClick={saveApiKey} className="px-4 py-2 text-sm text-black bg-white rounded-md font-medium hover:bg-[#E5E5E5]">Salvar</button>
-                </div>
-             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <div className="md:hidden absolute top-0 left-0 right-0 h-14 border-b border-[#262626] bg-[#000000]/80 backdrop-blur-md z-40 flex items-center justify-between px-4">
         <div className="flex items-center">
